@@ -6,9 +6,14 @@ Result = Struct.new(:team1_score, :team2_score) do
     team1_score.total > team2_score.total ? team1_score.team : team2_score.team
   end
 end
-Score = Struct.new(:team, :goals, :behinds) do
+Score = Struct.new(:goals, :behinds) do
   def total
     goals * 6 + behinds
+  end
+end
+GameScore = Struct.new(:q1_score, :q2_score, :q3_score, :q4_score) do 
+  def total
+    [q1_score, q2_score, q3_score, q4_score].sum(&:total)
   end
 end
 LadderEntry = Struct.new(:team, :wins, :points, :ratio)
