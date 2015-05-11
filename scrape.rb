@@ -1,6 +1,7 @@
 require 'nokogiri'
+require 'afl_db'
 
-Round = Struct.new(:nr, :results)
+Round = Struct.new(:nr, :results, :ladder)
 Match = Struct.new(:team1_score, :team2_score) do
   def winner
     team1_score.total > team2_score.total ? team1_score.team : team2_score.team
@@ -18,7 +19,6 @@ GameScore = Struct.new(:team, :q1_score, :q2_score, :q3_score, :q4_score) do
     q4_score.total
   end
 end
-# Ladder = [LadderEntry]
 
 def parse_results(results)
   # do something
@@ -46,7 +46,7 @@ end
 
 def parse_round(results, round)
   matches = results.children.select { |e| e.name == 'table' }
-  matches.map { |e| parse_match(e, round) }
+  Round.new(round, matches.map { |e| parse_match(e, round) })
 end
 
 def parse_match(e, round)
@@ -65,15 +65,15 @@ page = Nokogiri::HTML(open("2014.html"))
 puts page.class   # => Nokogirij:HTML::Document
 # puts page.css('table#root').map { |t| t['width'] }.size
 hack = false
-results = page.xpath('//td[table]')
+tables = page.xpath('//td[table]')
 
 # TODO: get rid of hack and use in_groups_of(2)
-results.each_cons(2).map { |results,ladder|
+rounds = tables.each_cons(2).map { |results,ladder|
   hack = !hack
   next unless hack
 
   ladder = parse_ladder(ladder)
   round_results = parse_round(results, ladder.round)
-  p round_results.first.winner
+  Round.new(ladder.round, round_results, ladder)
 }
 
