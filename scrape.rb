@@ -6,7 +6,7 @@ Match = Struct.new(:team1_score, :team2_score) do
     team1_score.total > team2_score.total ? team1_score.team : team2_score.team
   end
 end
-class Bye; end
+Bye = Struct.new(:team, :round)
 
 Score = Struct.new(:goals, :behinds) do
   def total
@@ -44,10 +44,15 @@ def parse_team_score(name, cumulative_score, total)
   GameScore.new(name, *cumulative_score.scan(/(\d+)\.(\d+)/).map { |g,b| Score.new(g.to_i, b.to_i) })
 end
 
-def parse_match(e)
+def parse_round(results, round)
+  matches = results.children.select { |e| e.name == 'table' }
+  matches.map { |e| parse_match(e, round) }
+end
+
+def parse_match(e, round)
   cells = e.css('td')
   if cells.size == 2 && cells[1].text =~ /Bye/i
-    Bye.new
+    Bye.new(cells[0].text.strip, round)
   else
     t1 = parse_team_score(*cells[0..2].map(&:text))
     t2 = parse_team_score(*cells[4..6].map(&:text))
@@ -61,13 +66,14 @@ puts page.class   # => Nokogirij:HTML::Document
 # puts page.css('table#root').map { |t| t['width'] }.size
 hack = false
 results = page.xpath('//td[table]')
-results.each_cons(2).map { |round,ladder|
+
+# TODO: get rid of hack and use in_groups_of(2)
+results.each_cons(2).map { |results,ladder|
   hack = !hack
   next unless hack
-  p "round -> #{round.children.size}"
-  p "ladder -> #{ladder.children.size}"
 
-  results = round.children.select { |e| e.name == 'table' }.map { |e| parse_match(e) }
   ladder = parse_ladder(ladder)
+  round_results = parse_round(results, ladder.round)
+  p round_results.first.winner
 }
 
